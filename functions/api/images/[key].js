@@ -1,0 +1,1 @@
+export async function onRequestGet(c){const key=decodeURIComponent(c.params.key);const obj=await c.env.MEDIA.get(key);if(!obj)return new Response('Not found',{status:404});const headers=new Headers();obj.writeHttpMetadata(headers);headers.set('etag',obj.httpEtag);headers.set('Cache-Control','public, max-age=31536000, immutable');return new Response(obj.body,{headers})}
