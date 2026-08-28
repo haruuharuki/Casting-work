@@ -1,0 +1,3 @@
+function json(data,status=200){return Response.json(data,{status,headers:{'Cache-Control':'no-store'}})}
+function isAdmin(c){const got=c.request.headers.get('x-admin-key')||'';return !!c.env.ADMIN_KEY&&got===c.env.ADMIN_KEY}
+export async function onRequestDelete(c){if(!isAdmin(c))return json({ok:false,error:'unauthorized'},401);try{const id=c.params.id;const row=await c.env.DB.prepare('SELECT image_key FROM products WHERE id=?').bind(id).first();if(row?.image_key)await c.env.MEDIA.delete(row.image_key);await c.env.DB.prepare('DELETE FROM products WHERE id=?').bind(id).run();return json({ok:true,id})}catch(e){return json({ok:false,error:String(e)},500)}}
