@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Casting Work Calculator</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f4ef;
+      --panel: #ffffff;
+      --ink: #232323;
+      --muted: #6b6b67;
+      --line: #dedbd3;
+      --accent: #2d6657;
+      --accent-soft: #e7f1ed;
+      --warn: #8a5b18;
+      --danger: #9b3f36;
+      --radius: 18px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.45;
+    }
+
+    .shell {
+      width: min(1180px, calc(100% - 28px));
+      margin: 28px auto 56px;
+    }
+
+    header {
+      display: flex;
+      gap: 20px;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 7px; font-size: clamp(28px, 5vw, 42px); letter-spacing: -0.04em; }
+    h2 { font-size: 20px; margin-bottom: 16px; }
+    h3 { font-size: 15px; margin-bottom: 8px; }
+    .sub { color: var(--muted); max-width: 760px; }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      white-space: nowrap;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .stack { display: grid; gap: 18px; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: 0 8px 26px rgba(36, 34, 29, 0.045);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 13px;
+    }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .full { grid-column: 1 / -1; }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    input, select, button {
+      font: inherit;
+    }
+
+    input, select {
+      width: 100%;
+      border: 1px solid #cbc8c0;
+      background: #fff;
+      color: var(--ink);
+      border-radius: 11px;
+      padding: 10px 11px;
+      outline: none;
+    }
+    input:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(45, 102, 87, 0.10);
+    }
+
+    button {
+      border: 0;
+      border-radius: 11px;
+      padding: 10px 13px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .primary { background: var(--accent); color: #fff; }
+    .ghost { background: #efede7; color: var(--ink); }
+
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .help { font-size: 12px; color: var(--muted); margin-top: 7px; }
+    .warn { color: var(--warn); }
+    .danger { color: var(--danger); }
+    .divider { height: 1px; background: var(--line); margin: 18px 0; }
+
+    .result-card {
+      position: sticky;
+      top: 16px;
+    }
+
+    .metric {
+      padding: 14px 0;
+      border-bottom: 1px dashed var(--line);
+    }
+    .metric:last-child { border-bottom: 0; }
+    .metric .name { color: var(--muted); font-size: 12px; }
+    .metric .value { font-size: 25px; font-weight: 800; letter-spacing: -0.03em; }
+    .metric .mini { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+    .mix {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .mix > div {
+      padding: 12px;
+      background: var(--accent-soft);
+      border-radius: 12px;
+    }
+    .mix b { display: block; font-size: 20px; color: var(--accent); }
+
+    .status {
+      padding: 11px 12px;
+      border-radius: 12px;
+      background: #f1f0eb;
+      font-size: 13px;
+      margin-top: 12px;
+    }
+    .status.ok { background: #e8f3ed; color: #245d4c; }
+    .status.bad { background: #f8e9e6; color: var(--danger); }
+
+    .svg-box {
+      border: 1px dashed #bdb9af;
+      background: #faf9f6;
+      border-radius: 13px;
+      padding: 13px;
+    }
+    .svg-meta { margin-top: 9px; font-size: 12px; color: var(--muted); }
+
+    footer {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; }
+      .result-card { position: static; }
+    }
+    @media (max-width: 620px) {
+      .grid, .grid.three { grid-template-columns: 1fr; }
+      header { display: block; }
+      .tag { margin-top: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <h1>Casting Work</h1>
+        <p class="sub">เครื่องคิดเลขจิ๋วสำหรับทำ master → แม่พิมพ์ซิลิโคน → หล่อ epoxy แบบชั่งน้ำหนัก ไม่ต้องนั่งหาร A/B ตอนมือเหนียว</p>
+      </div>
+      <span class="tag">V0.1 · by weight only</span>
+    </header>
+
+    <div class="layout">
+      <section class="stack">
+        <article class="card">
+          <h2>1 · ชิ้นงาน / Master</h2>
+          <div class="grid">
+            <label>
+              วิธีหาพื้นที่รูปทรง
+              <select id="areaMode">
+                <option value="manual">กรอกพื้นที่เอง</option>
+                <option value="svg">อ่าน silhouette จาก SVG</option>
+                <option value="rect">ประมาณจาก กว้าง × สูง × %พื้นที่</option>
+              </select>
+            </label>
+            <label>
+              จำนวน cavity ในแม่พิมพ์
+              <input id="cavities" type="number" min="1" step="1" value="8" />
+            </label>
+          </div>
+
+          <div id="manualAreaPanel" class="grid" style="margin-top:13px">
+            <label>
+              พื้นที่รูปทรง 1 ชิ้น (cm²)
+              <input id="manualArea" type="number" min="0" step="0.01" value="18" />
+            </label>
+          </div>
+
+          <div id="rectAreaPanel" class="grid three" style="margin-top:13px; display:none">
+            <label>กว้าง (mm)<input id="rectWidth" type="number" min="0" step="0.1" value="50" /></label>
+            <label>สูง (mm)<input id="rectHeight" type="number" min="0" step="0.1" value="50" /></label>
+            <label>รูปกินพื้นที่ (%)<input id="coverage" type="number" min="1" max="100" step="1" value="70" /></label>
+          </div>
+
+          <div id="svgAreaPanel" class="svg-box" style="margin-top:13px; display:none">
+            <label>
+              SVG silhouette
+              <input id="svgFile" type="file" accept="image/svg+xml,.svg" />
+            </label>
+            <div class="grid" style="margin-top:10px">
+              <label>
+                ต้องการให้ชิ้นงานกว้าง (mm)
+                <input id="svgTargetWidth" type="number" min="1" step="0.1" value="50" />
+              </label>
+            </div>
+            <div id="svgMeta" class="svg-meta">ยังไม่ได้เลือกไฟล์</div>
+            <p class="help">คำนวณพื้นที่โดย rasterize SVG ใน browser แล้วนับ pixel ที่ไม่โปร่งใส เหมาะกับ silhouette ปิดทึบ; SVG เส้น stroke อย่างเดียวอาจประเมินพื้นที่ต่ำเกินจริง</p>
+          </div>
+
+          <div class="divider"></div>
+          <div class="grid three">
+            <label>
+              ความหนาจั่วปัง / ชั้น (mm)
+              <input id="boardThickness" type="number" min="0" step="0.01" value="1.4" />
+            </label>
+            <label>
+              จำนวนชั้น
+              <input id="boardLayers" type="number" min="1" step="1" value="2" />
+            </label>
+            <label>
+              ความหนา master/final (mm)
+              <input id="masterThickness" type="number" readonly />
+            </label>
+          </div>
+          <p class="help">ค่าเริ่มต้น 1.4 mm × 2 ชั้น = 2.8 mm ตามแผนจั่วปังของเรา</p>
+        </article>
+
+        <article class="card">
+          <h2>2 · แม่พิมพ์ซิลิโคน</h2>
+          <div class="grid three">
+            <label>กล่อง mold ยาว (mm)<input id="moldL" type="number" min="0" step="0.1" value="180" /></label>
+            <label>กล่อง mold กว้าง (mm)<input id="moldW" type="number" min="0" step="0.1" value="120" /></label>
+            <label>ความสูงซิลิโคนรวม (mm)<input id="moldH" type="number" min="0" step="0.1" value="8" /></label>
+          </div>
+
+          <div class="divider"></div>
+          <div class="grid">
+            <label>
+              สูตรซิลิโคน
+              <select id="silPreset">
+                <option value="1:1">Demo · 1:1</option>
+                <option value="100:3">Demo · 100:3</option>
+                <option value="custom">Custom</option>
+              </select>
+            </label>
+            <label>ความหนาแน่นผสม (g/mL)<input id="silDensity" type="number" min="0.1" step="0.01" value="1.10" /></label>
+            <label>Part A<input id="silA" type="number" min="0.001" step="0.001" value="1" /></label>
+            <label>Part B<input id="silB" type="number" min="0.001" step="0.001" value="1" /></label>
+            <label>เผื่อสูญเสีย (%)<input id="silWaste" type="number" min="0" step="0.1" value="8" /></label>
+            <label>Shrinkage เชิงเส้น (%)<input id="silShrink" type="number" min="0" step="0.01" value="0.10" /></label>
+            <label>ราคาซิลิโคน (บาท/kg)<input id="silPrice" type="number" min="0" step="1" value="450" /></label>
+            <label>คาดว่าใช้ mold ได้ (รอบ)<input id="moldCycles" type="number" min="1" step="1" value="30" /></label>
+          </div>
+          <p class="help warn">ค่าของ Demo มีไว้ทดสอบเครื่องคิดเลขเท่านั้น — ก่อนหล่อจริงให้กรอก ratio, density และ shrinkage จากฉลาก/TDS ของผลิตภัณฑ์ที่ซื้อ</p>
+        </article>
+
+        <article class="card">
+          <h2>3 · Epoxy / Resin batch</h2>
+          <div class="grid">
+            <label>
+              สูตร epoxy
+              <select id="resPreset">
+                <option value="1:1">Demo · 1:1</option>
+                <option value="2:1">Demo · 2:1</option>
+                <option value="3:1">Demo · 3:1</option>
+                <option value="custom">Custom</option>
+              </select>
+            </label>
+            <label>จำนวนชิ้นที่จะเทรอบนี้<input id="pieces" type="number" min="1" step="1" value="8" /></label>
+            <label>Part A<input id="resA" type="number" min="0.001" step="0.001" value="1" /></label>
+            <label>Part B<input id="resB" type="number" min="0.001" step="0.001" value="1" /></label>
+            <label>ความหนาแน่นผสม (g/mL)<input id="resDensity" type="number" min="0.1" step="0.01" value="1.10" /></label>
+            <label>เผื่อสูญเสีย (%)<input id="resWaste" type="number" min="0" step="0.1" value="8" /></label>
+            <label>Max pour ตาม TDS (mm)<input id="maxPour" type="number" min="0" step="0.1" value="10" /></label>
+            <label>ราคา epoxy (บาท/kg)<input id="resPrice" type="number" min="0" step="1" value="450" /></label>
+            <label>Resin shrinkage เชิงเส้น (%)<input id="resShrink" type="number" min="0" step="0.01" value="0" /></label>
+          </div>
+          <p class="help warn">อัตราส่วนทุกช่องใน V0.1 เป็น <b>by weight</b> เท่านั้น เพราะเราจะใช้เครื่องชั่ง ถ้าฉลากเขียน by volume ห้ามเอาตัวเลขมาใส่ตรง ๆ จนกว่าจะมีอัตราส่วน by weight จากผู้ผลิต</p>
+        </article>
+
+        <article class="card">
+          <h2>4 · ชดเชยการหดตัว (ไม่บังคับ)</h2>
+          <div class="grid">
+            <label>ขนาดสุดท้ายที่ต้องการ (mm)<input id="targetSize" type="number" min="0" step="0.01" value="50" /></label>
+            <label>Master ควรทำขนาด (mm)<input id="compensatedSize" type="number" readonly /></label>
+          </div>
+          <p class="help">คำนวณแบบเชิงเส้นจาก silicone shrinkage × resin shrinkage. ถ้า TDS ไม่บอกค่า resin shrinkage ให้ปล่อยเป็น 0 แทนการเดา</p>
+          <div class="toolbar">
+            <button class="ghost" id="saveBtn" type="button">บันทึกค่าชุดนี้ใน browser</button>
+            <button class="ghost" id="resetBtn" type="button">คืนค่าเริ่มต้น</button>
+          </div>
+        </article>
+      </section>
+
+      <aside class="card result-card">
+        <h2>ผลคำนวณ</h2>
+
+        <div class="metric">
+          <div class="name">พื้นที่ silhouette / ชิ้น</div>
+          <div class="value" id="outArea">—</div>
+          <div class="mini" id="outThickness">—</div>
+        </div>
+
+        <div class="metric">
+          <div class="name">Silicone ที่ต้องผสม</div>
+          <div class="value" id="outSilTotal">—</div>
+          <div class="mix">
+            <div>Part A<b id="outSilA">—</b></div>
+            <div>Part B<b id="outSilB">—</b></div>
+          </div>
+          <div class="mini" id="outSilVol">—</div>
+        </div>
+
+        <div class="metric">
+          <div class="name">Epoxy สำหรับ batch นี้</div>
+          <div class="value" id="outResTotal">—</div>
+          <div class="mix">
+            <div>Part A<b id="outResA">—</b></div>
+            <div>Part B<b id="outResB">—</b></div>
+          </div>
+          <div class="mini" id="outResVol">—</div>
+          <div id="pourStatus" class="status">—</div>
+        </div>
+
+        <div class="metric">
+          <div class="name">ต้นทุนวัสดุประมาณการ / ชิ้น</div>
+          <div class="value" id="outCostPiece">—</div>
+          <div class="mini" id="outCostDetail">—</div>
+        </div>
+
+        <div class="metric">
+          <div class="name">ต้นทุนแม่พิมพ์ซิลิโคน</div>
+          <div class="value" id="outMoldCost">—</div>
+          <div class="mini">ไม่รวม master, ถ้วย, ถุงมือ, pigment, hardware, ค่าแรง และของเสียอื่นนอก % ที่กรอก</div>
+        </div>
+      </aside>
+    </div>
+
+    <footer>ข้อมูลทั้งหมดคำนวณใน browser และเก็บ localStorage เท่านั้น · ตรวจ TDS/ฉลากของวัสดุจริงก่อนชั่งทุกครั้ง</footer>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const ids = [
+      'areaMode','cavities','manualArea','rectWidth','rectHeight','coverage','svgTargetWidth',
+      'boardThickness','boardLayers','moldL','moldW','moldH','silPreset','silDensity','silA','silB',
+      'silWaste','silShrink','silPrice','moldCycles','resPreset','pieces','resA','resB','resDensity',
+      'resWaste','maxPour','resPrice','resShrink','targetSize'
+    ];
+
+    let svgFillRatio = null;
+    let svgAspect = null; // width / height
+
+    const num = (id) => {
+      const v = Number($(id).value);
+      return Number.isFinite(v) ? v : 0;
+    };
+
+    const fmt = (n, digits = 2) => Number.isFinite(n)
+      ? n.toLocaleString('th-TH', { maximumFractionDigits: digits, minimumFractionDigits: 0 })
+      : '—';
+
+    function setPanels() {
+      const mode = $('areaMode').value;
+      $('manualAreaPanel').style.display = mode === 'manual' ? 'grid' : 'none';
+      $('rectAreaPanel').style.display = mode === 'rect' ? 'grid' : 'none';
+      $('svgAreaPanel').style.display = mode === 'svg' ? 'block' : 'none';
+    }
+
+    function applyRatioPreset(kind) {
+      if (kind === 'sil') {
+        const p = $('silPreset').value;
+        if (p === '1:1') { $('silA').value = 1; $('silB').value = 1; }
+        if (p === '100:3') { $('silA').value = 100; $('silB').value = 3; }
+      } else {
+        const p = $('resPreset').value;
+        if (p === '1:1') { $('resA').value = 1; $('resB').value = 1; }
+        if (p === '2:1') { $('resA').value = 2; $('resB').value = 1; }
+        if (p === '3:1') { $('resA').value = 3; $('resB').value = 1; }
+      }
+      calculate();
+    }
+
+    function pieceAreaCm2() {
+      const mode = $('areaMode').value;
+      if (mode === 'manual') return Math.max(0, num('manualArea'));
+      if (mode === 'rect') {
+        const areaMm2 = num('rectWidth') * num('rectHeight') * Math.min(100, Math.max(0, num('coverage'))) / 100;
+        return Math.max(0, areaMm2 / 100);
+      }
+      if (mode === 'svg' && svgFillRatio && svgAspect) {
+        const wMm = Math.max(0, num('svgTargetWidth'));
+        const hMm = wMm / svgAspect;
+        return (wMm * hMm * svgFillRatio) / 100;
+      }
+      return 0;
+    }
+
+    function splitByWeight(totalGrams, aRatio, bRatio) {
+      const sum = aRatio + bRatio;
+      if (sum <= 0) return [0, 0];
+      return [totalGrams * aRatio / sum, totalGrams * bRatio / sum];
+    }
+
+    function calculate() {
+      setPanels();
+
+      const area = pieceAreaCm2();
+      const masterMm = Math.max(0, num('boardThickness') * num('boardLayers'));
+      $('masterThickness').value = masterMm ? masterMm.toFixed(2) : '';
+      const thicknessCm = masterMm / 10;
+      const cavities = Math.max(1, Math.round(num('cavities')) || 1);
+      const pieceVolMl = area * thicknessCm; // 1 cm³ = 1 mL
+      const masterVolAll = pieceVolMl * cavities;
+
+      // Silicone volume = mold box volume - positive master volume.
+      const moldBoxMl = Math.max(0, num('moldL') * num('moldW') * num('moldH') / 1000);
+      const silNetMl = Math.max(0, moldBoxMl - masterVolAll);
+      const silWasteFactor = 1 + Math.max(0, num('silWaste')) / 100;
+      const silTotalG = silNetMl * Math.max(0, num('silDensity')) * silWasteFactor;
+      const [silAG, silBG] = splitByWeight(silTotalG, Math.max(0, num('silA')), Math.max(0, num('silB')));
+
+      // Resin volume follows piece silhouette volume × actual batch count.
+      const pieces = Math.max(1, Math.round(num('pieces')) || 1);
+      const resNetMl = pieceVolMl * pieces;
+      const resWasteFactor = 1 + Math.max(0, num('resWaste')) / 100;
+      const resTotalG = resNetMl * Math.max(0, num('resDensity')) * resWasteFactor;
+      const [resAG, resBG] = splitByWeight(resTotalG, Math.max(0, num('resA')), Math.max(0, num('resB')));
+
+      // Costs.
+      const moldCost = silTotalG / 1000 * Math.max(0, num('silPrice'));
+      const resinBatchCost = resTotalG / 1000 * Math.max(0, num('resPrice'));
+      const cycles = Math.max(1, Math.round(num('moldCycles')) || 1);
+      const moldCostPerPiece = moldCost / (cavities * cycles);
+      const resinCostPerPiece = resinBatchCost / pieces;
+      const materialCostPerPiece = moldCostPerPiece + resinCostPerPiece;
+
+      // Sequential linear shrinkage compensation.
+      const sSil = Math.min(99.9, Math.max(0, num('silShrink'))) / 100;
+      const sRes = Math.min(99.9, Math.max(0, num('resShrink'))) / 100;
+      const retain = (1 - sSil) * (1 - sRes);
+      const target = Math.max(0, num('targetSize'));
+      $('compensatedSize').value = retain > 0 ? (target / retain).toFixed(3) : '';
+
+      $('outArea').textContent = `${fmt(area, 3)} cm²`;
+      $('outThickness').textContent = `${fmt(masterMm, 2)} mm หนา · ${fmt(pieceVolMl, 3)} mL/ชิ้น · ${cavities} cavities`;
+
+      $('outSilTotal').textContent = `${fmt(silTotalG, 1)} g`;
+      $('outSilA').textContent = `${fmt(silAG, 1)} g`;
+      $('outSilB').textContent = `${fmt(silBG, 1)} g`;
+      $('outSilVol').textContent = `ปริมาตรสุทธิ ${fmt(silNetMl, 1)} mL + เผื่อ ${fmt(num('silWaste'), 1)}%`;
+
+      $('outResTotal').textContent = `${fmt(resTotalG, 1)} g`;
+      $('outResA').textContent = `${fmt(resAG, 1)} g`;
+      $('outResB').textContent = `${fmt(resBG, 1)} g`;
+      $('outResVol').textContent = `ปริมาตรสุทธิ ${fmt(resNetMl, 1)} mL สำหรับ ${pieces} ชิ้น + เผื่อ ${fmt(num('resWaste'), 1)}%`;
+
+      const maxPour = Math.max(0, num('maxPour'));
+      const pourOk = maxPour === 0 || masterMm <= maxPour;
+      $('pourStatus').className = `status ${pourOk ? 'ok' : 'bad'}`;
+      $('pourStatus').textContent = maxPour === 0
+        ? 'ยังไม่ได้กำหนด Max pour — เช็ก TDS ก่อนเทจริง'
+        : pourOk
+          ? `✓ ความหนา ${fmt(masterMm, 2)} mm ไม่เกิน Max pour ${fmt(maxPour, 2)} mm`
+          : `⚠ ความหนา ${fmt(masterMm, 2)} mm เกิน Max pour ${fmt(maxPour, 2)} mm ของสูตรที่กรอก`;
+
+      $('outCostPiece').textContent = `${fmt(materialCostPerPiece, 2)} บาท`;
+      $('outCostDetail').textContent = `Epoxy ≈ ${fmt(resinCostPerPiece, 2)} บ./ชิ้น + amortized silicone ≈ ${fmt(moldCostPerPiece, 2)} บ./ชิ้น (${cycles} รอบ)`;
+      $('outMoldCost').textContent = `${fmt(moldCost, 2)} บาท`;
+    }
+
+    async function analyzeSvg(file) {
+      if (!file) return;
+      const text = await file.text();
+      let parsed;
+      try {
+        parsed = new DOMParser().parseFromString(text, 'image/svg+xml');
+        if (parsed.querySelector('parsererror')) throw new Error('invalid SVG');
+      } catch {
+        $('svgMeta').textContent = 'อ่าน SVG ไม่สำเร็จ';
+        svgFillRatio = null;
+        svgAspect = null;
+        calculate();
+        return;
+      }
+
+      const svg = parsed.documentElement;
+      const viewBox = (svg.getAttribute('viewBox') || '').trim().split(/[ ,]+/).map(Number);
+      let aspect = null;
+      if (viewBox.length === 4 && viewBox.every(Number.isFinite) && viewBox[2] > 0 && viewBox[3] > 0) {
+        aspect = viewBox[2] / viewBox[3];
+      }
+      if (!aspect) {
+        const w = parseFloat(svg.getAttribute('width'));
+        const h = parseFloat(svg.getAttribute('height'));
+        if (w > 0 && h > 0) aspect = w / h;
+      }
+      if (!aspect) aspect = 1;
+
+      const blob = new Blob([text], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+
+      img.onload = () => {
+        try {
+          const maxSide = 900;
+          let cw, ch;
+          if (aspect >= 1) { cw = maxSide; ch = Math.max(1, Math.round(maxSide / aspect)); }
+          else { ch = maxSide; cw = Math.max(1, Math.round(maxSide * aspect)); }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = cw;
+          canvas.height = ch;
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          ctx.clearRect(0, 0, cw, ch);
+          ctx.drawImage(img, 0, 0, cw, ch);
+          const px = ctx.getImageData(0, 0, cw, ch).data;
+          let filled = 0;
+          const total = cw * ch;
+          for (let i = 3; i < px.length; i += 4) {
+            if (px[i] > 12) filled++;
+          }
+          svgFillRatio = total ? filled / total : 0;
+          svgAspect = aspect;
+          const wMm = num('svgTargetWidth');
+          const hMm = wMm / aspect;
+          $('svgMeta').textContent = `${file.name} · สัดส่วน ${fmt(aspect, 3)} · พื้นที่ silhouette ≈ ${fmt(svgFillRatio * 100, 1)}% · สูงที่ width นี้ ≈ ${fmt(hMm, 1)} mm`;
+          calculate();
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        $('svgMeta').textContent = 'render SVG ไม่สำเร็จ';
+        svgFillRatio = null;
+        svgAspect = null;
+        calculate();
+      };
+      img.src = url;
+    }
+
+    function saveState() {
+      const state = {};
+      ids.forEach(id => state[id] = $(id).value);
+      localStorage.setItem('casting-work-v01', JSON.stringify(state));
+      const btn = $('saveBtn');
+      const old = btn.textContent;
+      btn.textContent = 'บันทึกแล้ว ✓';
+      setTimeout(() => btn.textContent = old, 1200);
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem('casting-work-v01');
+        if (!raw) return;
+        const state = JSON.parse(raw);
+        ids.forEach(id => {
+          if (state[id] !== undefined) $(id).value = state[id];
+        });
+      } catch { /* ignore damaged local state */ }
+    }
+
+    function resetState() {
+      localStorage.removeItem('casting-work-v01');
+      location.reload();
+    }
+
+    ids.forEach(id => {
+      $(id).addEventListener('input', calculate);
+      $(id).addEventListener('change', calculate);
+    });
+    $('silPreset').addEventListener('change', () => applyRatioPreset('sil'));
+    $('resPreset').addEventListener('change', () => applyRatioPreset('res'));
+    $('svgFile').addEventListener('change', (e) => analyzeSvg(e.target.files?.[0]));
+    $('saveBtn').addEventListener('click', saveState);
+    $('resetBtn').addEventListener('click', resetState);
+
+    loadState();
+    applyRatioPreset('sil');
+    applyRatioPreset('res');
+    calculate();
+  </script>
+</body>
+</html>
