@@ -118,6 +118,26 @@ async function getImage(encodedKey, env) {
   return new Response(obj.body, { headers });
 }
 
+async function serveAsset(request, env) {
+  const asset = await env.ASSETS.fetch(request);
+  const type = asset.headers.get('content-type') || '';
+  if (request.method === 'GET' && type.includes('text/html')) {
+    const text = await asset.text();
+    const html = text.includes('cloud.js')
+      ? text
+      : text.replace('</body>', '<script src="/cloud.js"></script></body>');
+    const headers = new Headers(asset.headers);
+    headers.delete('content-length');
+    headers.set('Cache-Control', 'no-store');
+    return new Response(html, {
+      status: asset.status,
+      statusText: asset.statusText,
+      headers,
+    });
+  }
+  return asset;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -142,6 +162,6 @@ export default {
       return getImage(path.slice('/api/images/'.length), env);
     }
 
-    return env.ASSETS.fetch(request);
+    return serveAsset(request, env);
   },
 };
